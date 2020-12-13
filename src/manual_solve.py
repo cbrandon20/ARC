@@ -14,6 +14,29 @@ from scipy.spatial import distance
 ### examples below. Delete the three examples. The tasks you choose
 ### must be in the data/training directory, not data/evaluation.
 
+"""
+Student Name: Colm Brandon 
+Student Number: 20236454
+Github Repo: https://github.com/cbrandon20/ARC
+"""
+
+"""
+Summary Reflection:
+Numpy and Scipy were the only non-standard libraries used:
+Scipy, the distance module was used for calculating the euclidian distance between coloured points in the matrix, to identify clusters
+Numpy was used for matrix and vector manipulation
+
+First step in each of the solutions was to identify the background colour, in order to do this the assumption was made that the most frequently occuring colour was the background.
+This assumption held true for each of the problems attempted here, but there would definitely be exceptions in some ARC problems, so a more sophisticated algorithm would be needed for a general solution.
+Once the background was found the second common step was to find the clusters of coloured points. A cluster in this case was a set of non background coloured points that each have atleast one other 
+non point in the set within a euclidean distance of sqrt(2).
+
+
+The approach that was taken to the problem, was viewing this a coordinate system from (0,0) to (grid_height, grid_width) and then to iterate
+over column by column (this was somewhat counter-intuitive as the coordinates took the format of (y,x) rather than (x,y)), i
+
+"""
+
 
 def get_background(x):
     ### The assumption is made that the most prevalent colour is the background
@@ -23,7 +46,6 @@ def get_background(x):
     return x_background
 
 def identify_clusters(x, b_colour):
-    # a cluster is a set of non background coloured points that each have another non background colourd pointed within sqrt(2)
 
     def dfs(adj_list, visited, vertex, result, key):
         visited.add(vertex)
@@ -302,7 +324,18 @@ def transfrom_input_clusters_to_colour_map(clusters, x_edges, y_edges):
 
 
 
+"""
+b775ac94 required transformations
+Identify the clusters of non background colours
+Each cluster contains a single colour which contains the full shape?? to be translated
+There is then either 2 or 3 other single colured points joined to the full shape
+Depending on the singles points position relative to the full shape it indicates a reflection 
+of the full shape across the x or y axis or both, in the colour of the single point
+Get single Colour Shape -> Copy -> Reflect Across Axis (based on adjoining coloured dots) -> Repeat for all coloured dots
 
+This implemenation solves all the training and testing data correctly
+
+"""
 
 def solve_b775ac94(x):
     background = get_background(x)
@@ -355,6 +388,17 @@ def solve_b775ac94(x):
 
     return y.astype(int)
 
+
+
+"""
+There is a red frame and a shape in each problem.
+The red frame becomes the global coordinates and the shape needs to be interpolated to fully occupy the interior of the red frame
+the goal is essentially zooming in on the shape, with the magnifcation being relative to the differece in size between the shape and the frame
+Get Frame -> Get Shape -> Set output to Frame -> Scale Shape to fit Frame -> Center Shape in Frame
+
+This implemenation solves all the training and testing data correctly
+"""
+
 def solve_6b9890af(x):
     background = get_background(x)
     clu = identify_clusters(x, background)
@@ -375,6 +419,19 @@ def solve_6b9890af(x):
     Y = matrix_scaler(get_scale(frame, shape), shape, shape_cluster, original_coordinates, 0, x)
     x = colour_frame(frame_cluster, frame_og_co, Y, x)
     return x.astype(int)
+
+
+
+
+
+"""
+There are two single dots of different colours attached to either the x edges or y edges, 
+the goal is to draw a line from the single dots across to the opposite edge
+Then repeat the lines pattern until the end of the grid is met
+Points -> Lines -> Copy Lines -> Translate & Repeat 
+
+This implemenation solves all the training and testing data correctly
+"""
 
 def solve_0a938d79(x):
     far_edge = np.array(x.shape) - 1
