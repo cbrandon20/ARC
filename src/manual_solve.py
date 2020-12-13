@@ -118,10 +118,10 @@ def extract_frame(cluster, x):
             non_edge_points += 1
 
     if non_edge_points == 0 and four_corners:
-        print("Frame detected")
+        #"Frame detected"
         return (True, [(i - i_min, j - j_min) for i, j in corners], (cluster - np.array(corners[0])), cluster)
     else:
-        print("No Frame Detected")
+        #"No Frame Detected")
         return (False, [(i - i_min, j - j_min) for i, j in corners], (cluster - np.array(corners[0])), cluster)
 
 
@@ -241,6 +241,69 @@ def get_subsections(cluster, x):
     return (sub_cluster, main_shape)
 
 
+def map_to_colour(clusters,x):
+    colour_as_key = {}
+    for k,v in clusters.items():
+        colour_as_key[x[v[0][0]][v[0][1]]] = v
+    return colour_as_key
+
+
+def transfrom_input_clusters_to_colour_map(clusters, x_edges, y_edges):
+    coordinate_to_compare = {}
+    single_lines = {}
+    for k, v in clusters.items():
+        line = []
+        for v_ in v:
+            print(v_)
+            if v_[1] in x_edges:
+                #ON X Edge
+                coordinate_to_compare[k] = [v_[0], 0]
+                # fix Y and generate points
+                for i in range(x_edges[1] + 1):
+                    line.append(np.array([v_[0], i]))
+            elif v_[0] in y_edges:
+                #On Y Edge
+                coordinate_to_compare[k] = [0, v_[1]]
+                # fix X and generate points
+                for i in range(y_edges[1] + 1):
+                    line.append(np.array([i, v_[1]]))
+        single_lines[k] = line
+
+    distance_from_origin = 9999
+    closest_to_origin = None
+    for k, v in coordinate_to_compare.items():
+        dist = np.sum(np.array(v))
+        if dist < distance_from_origin:
+            closest_to_origin = k
+            distance_from_origin = dist
+
+    space_between_lines = None
+    for k, v in coordinate_to_compare.items():
+        if k != closest_to_origin:
+            space_between_lines = np.array(v) - np.array(coordinate_to_compare[closest_to_origin])
+
+    final_lines = {}
+    for k, v in single_lines.items():
+        points = []
+        for i in range(5):
+            temp = v + space_between_lines * 2 * i
+            [points.append(tuple(t)) for t in temp]
+            final_lines[k] = points
+
+    colour_map = {}
+    for k, v in final_lines.items():
+        for v_ in v:
+            colour_map[v_] = k
+
+    return colour_map
+
+
+
+
+
+
+
+
 def solve_b775ac94(x):
     background = get_background(x)
     clu = identify_clusters(x, background)
@@ -252,6 +315,11 @@ def solve_b775ac94(x):
     X_ = x
     axis_translating = {2: np.array([1, 0]), 4: np.array([1, 0]), 1: np.array([0, 1]), 5: np.array([0, 1]),
                         3: np.array([1, 1])}
+    # Data structure for values on cluster
+    # First is which cluster
+    # Second is Tuple, index 0 is Dict of subclusters, index 1 is the key for the main sub cluster to be reflected
+    # Is the key for the subclusters (key is their colour)
+    # value index 0 is a list of the subcluster points, index -1 it's position relative to origin, for main sub cluster index 1 = the pivot points
     for k, v in clu.items():
         translated_subcluster = {}
         for k_, v_ in v[0].items():
@@ -309,7 +377,24 @@ def solve_6b9890af(x):
     return x.astype(int)
 
 def solve_0a938d79(x):
-    return x
+    far_edge = np.array(x.shape) - 1
+    y_edges = (0, far_edge[0])
+    x_edges = (0, far_edge[1])
+
+    clu = identify_clusters(x, 0)
+    clu = map_to_colour(clu, x)
+    colour_map = transfrom_input_clusters_to_colour_map(clu, x_edges, y_edges)
+
+    y = np.ones(shape=x.shape)
+
+    for i in range(y.shape[0]):
+        for j in range(y.shape[1]):
+            if (i, j) in colour_map.keys():
+                y[i][j] = y[i][j] * colour_map[(i, j)]
+            else:
+                y[i][j] = 0
+
+    return y.astype(int)
 
 
 def main():
