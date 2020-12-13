@@ -186,9 +186,106 @@ def colour_frame(frame_cluster, original_coordinates, Y, X):
     return Y
 
 
-def solve_b775ac94(x):
+def get_subsections(cluster, x):
+    sub_cluster = {}
+    for v in cluster:
+        if x[v[0]][v[1]] in sub_cluster.keys():
+            sub_cluster[x[v[0]][v[1]]].append(v)
+        else:
+            sub_cluster[x[v[0]][v[1]]] = list()
+            sub_cluster[x[v[0]][v[1]]].append(v)
+    main_shape = None
+    for k, v in sub_cluster.items():
+        if len(v) > 1:
+            main_shape = k
+            break
+    min_distance = 100
+    pivot_point = None
+    for k, v in sub_cluster.items():
+        if k != main_shape:
+            min_distance = 100
+            for v_ in sub_cluster[main_shape]:
+                if distance.euclidean(v, v_) < min_distance:
+                    min_distance = distance.euclidean(v, v_)
+                    pivot_point = v_
 
-    return x
+    rel = {(1, 0): -2, (-1, 0): 2, (0, 1): -1, (0, -1): 1}
+    rel_corners = {(1, 1): 3, (-1, 1): 1, (1, -1): 2, (-1, -1): 0}
+    if_no_foil = {(-1): 0, (1): 1, (-2): 0, (2): 2, (-2, 1): 2, (2, 1): 0, (-2, -1): 1, (2, 1): 3}
+
+    relative_pos = []
+    pivot_has_foil = False
+    for k, v in sub_cluster.items():
+        if k != main_shape:
+
+            rel_pos = tuple(np.array(pivot_point) - np.array(v[0]))
+            if rel_pos in rel_corners.keys():
+
+                sub_cluster[main_shape] = (sub_cluster[main_shape], pivot_point, rel_corners[rel_pos])
+                rel_pos_ = tuple(np.array(v[0]) - np.array(pivot_point))
+                sub_cluster[k] = (v, rel_corners[rel_pos_])
+
+                pivot_has_foil = True
+            else:
+                relative_pos.append((k, rel[rel_pos]))
+    if not pivot_has_foil:
+        sub_cluster[main_shape] = (
+        sub_cluster[main_shape], pivot_point, if_no_foil[tuple([x[1] for x in relative_pos])])
+
+    for k, v in relative_pos:
+        sub_cluster[k] = (sub_cluster[k], sub_cluster[main_shape][-1] + v)
+
+    # Subcluster is a dictionary, it's keys are the colour, it's values are a tuple the first entry is the points for the subcluter,
+    # The second is the subclusters location relative to the others 0: topleft, 1: topright, 2: bottomleft, 3: bottomright
+
+    return (sub_cluster, main_shape)
+
+
+def solve_b775ac94(x):
+    background = get_background(x)
+    clu = identify_clusters(x, background)
+    for k, v in clu.items():
+        clu[k] = get_subsections(v, x)
+
+    colour_map = {}
+    background_colour = 0
+    X_ = x
+    axis_translating = {2: np.array([1, 0]), 4: np.array([1, 0]), 1: np.array([0, 1]), 5: np.array([0, 1]),
+                        3: np.array([1, 1])}
+    for k, v in clu.items():
+        translated_subcluster = {}
+        for k_, v_ in v[0].items():
+            if k_ != v[1]:
+                tran_const = axis_translating[v_[-1] + v[0][v[1]][-1]]
+                # Get the midpoint between the too pivot points
+                # get the distance between the points and the midpoint
+                # divide them by 0.5 which is the step size, this gives the translation
+                midpoint = (np.array(v[0][v[1]][1]) + v_[0][0]) / 2
+                # print(midpoint,tran_const)
+                translated_coordinates = []
+                for v_c in v[0][v[1]][0]:
+                    steps = ((midpoint - np.array(v_c)) / 0.5) * tran_const
+                    translated_coordinates.append(tuple((np.array(v_c) + steps).astype(int)))
+                translated_subcluster[k_] = translated_coordinates
+            else:
+                translated_subcluster[k_] = v[0][v[1]][0]
+                pass
+
+        for k, v in translated_subcluster.items():
+            for v_ in v:
+                colour_map[v_] = k
+        # print(colour_map)
+    y = np.ones(shape=X_.shape)
+
+    for i in range(y.shape[0]):
+        for j in range(y.shape[1]):
+            if (i, j) in colour_map.keys():
+                y[i][j] = y[i][j] * colour_map[(i, j)]
+            else:
+                y[i][j] = background_colour
+
+
+    return y.astype(int)
 
 def solve_6b9890af(x):
     background = get_background(x)
