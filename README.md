@@ -8,6 +8,20 @@ A complete description of the dataset, its goals, and its underlying logic, can 
 
 As a reminder, a test-taker is said to solve a task when, upon seeing the task for the first time, they are able to produce the correct output grid for *all* test inputs in the task (this includes picking the dimensions of the output grid). For each test input, the test-taker is allowed 3 trials (this holds for all test-takers, either humans or AI).
 
+## manual_solve.py
+This version of the ARC repository contains the python script manaul_solve.py. This script reads in the json files from training subset of the ARC data. 
+
+It contains a series solve_*, with the star representing the label of an ARC problem.
+
+The solve_* functions each contain a hand coded solutions to that problem, which takes the input matrixes for the training and test instance of the problem and return the output matrix.
+
+When ran the manual_solve.py script reads in the json files for each problem for which there is a solve function, in this case [b775ac94, 6b9890af,0a938d79]. The jsons are a parsed and the input matrixes are passed iterively into their appropiate solve functions, which returns a solution.
+
+The output from the solve_* funciton is then evaluated against the correct solution and the user is then given the feedback; True if the solution is correct or False if the output matrix does not match the correct solution.
+
+The input and output matrixes are also printed to console.
+
+
 
 ## Task file format
 
