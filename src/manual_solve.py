@@ -16,6 +16,7 @@ from scipy.spatial import distance
 
 
 def get_background(x):
+    ### The assumption is made that the most prevalent colour is the background
     x_palette, x_palette_counts = np.unique(x, return_counts=True)
     x_background = x_palette[np.argmax(x_palette_counts)]
     # print(x_clusters.values())
@@ -23,6 +24,7 @@ def get_background(x):
 
 def identify_clusters(x, b_colour):
     # a cluster is a set of non background coloured points that each have another non background colourd pointed within sqrt(2)
+
     def dfs(adj_list, visited, vertex, result, key):
         visited.add(vertex)
         result[key].append(vertex)
@@ -30,6 +32,10 @@ def identify_clusters(x, b_colour):
             if neighbor not in visited:
                 dfs(adj_list, visited, neighbor, result, key)
 
+    #Scans the image column by column left to right, if it encounters a non background colour,
+    #The first one it encounters it it add the coordinates to a dict under the key (cluster_id) 0
+    #From then on it checks to see if any nonbackground coloured point encountered's euclidian distance is < sqrt of 2
+    #If it is, it adds appends the coordinates to the last under the cluster_id, if not it creates a new cluster
     coord_dict = {}
     cluster_no = 0
     for i in range(x.shape[0]):
@@ -52,7 +58,7 @@ def identify_clusters(x, b_colour):
                         coord_dict[cluster_no].append(tuple([i, j]))
                         cluster_no += 1
     # As the sytems scan row by row or column by column, it's guaranteed to cluster U shapres or similar seperately
-    # There it it's necessary to find overlaps between the first iteration of clusters and the final combine them
+    # There it it's necessary to find overlaps between the first iteration of clusters.
     refine_cluster = {}
     for i in range(len(coord_dict.values()) - 1):
         for j in range(i + 1, len(coord_dict.values())):
@@ -63,6 +69,8 @@ def identify_clusters(x, b_colour):
             if len(distance_list) > 0:
                 refine_cluster[(i, j)] = len(distance_list)
 
+    #The previous step finds overlaps between found clusters
+    #This step groups together clusters that all share overlaps
     edges = list(refine_cluster.keys())
     adj_list = defaultdict(list)
     for x, y in edges:
@@ -75,6 +83,8 @@ def identify_clusters(x, b_colour):
             dfs(adj_list, visited, vertex, result, vertex)
     x = list(coord_dict.keys())
     y = list(result.values())
+    #The clusters that had no errors are now added to the new clusters that were created in the previous step
+    #and subsequently returned.
     for v in x:
         included = False
         for xt in y:
@@ -91,14 +101,15 @@ def identify_clusters(x, b_colour):
         temp_list = sorted(temp_list)
         final_clusters[cluster_index] = temp_list
         cluster_index += 1
+
     return final_clusters
 
 
 def extract_frame(cluster, x):
+    #Specific to 6b9890af it decides which cluster is the shape and which is the red frame
     cluster_ = np.array(cluster)
     i_min, i_max = np.min(cluster_[:, 0]), np.max(cluster_[:, 0])
     j_min, j_max = np.min(cluster_[:, 1]), np.max(cluster_[:, 1])
-
     corners = [(i_min, j_min), (i_min, j_max), (i_max, j_min), (i_max, j_max)]
     non_edge_points = 0
     four_corners = all([True if c in cluster else False for c in corners])
@@ -115,6 +126,7 @@ def extract_frame(cluster, x):
 
 
 def get_scale(frame, shape):
+    #This see what the scaling is required for changing from the input coordinate system to the output coordinate system
     frame = np.array(frame)
     frame_min_max = []
     for i in range(len(frame)):
@@ -129,7 +141,10 @@ def get_scale(frame, shape):
 
 
 def matrix_scaler(scale, shape,shape_cluster, original_coordinates, background, X):
-    # Mapping to correct colur
+    #Up to now, the shape is just viewed as a non-background colour where as it has a colour in the original mapping
+    #This mataches the orignal cluster coordinates there colours, it then creates a shape matrix in the new coordinate system
+    #With the correct colors. In 6b9890af there's only a single colur in a cluster, however the function was written in this manner
+    #So it could be recycled for scaling multicolour shapes if need,
     colour_map = {}
     for trans, co in zip(shape_cluster, original_coordinates):
         colour_map[tuple(trans)] = X[co[0]][co[1]]
@@ -140,11 +155,13 @@ def matrix_scaler(scale, shape,shape_cluster, original_coordinates, background, 
                 y[i][j] = y[i][j] * colour_map[i, j]
             else:
                 y[i][j] = y[i][j] * background
-    y_ = np.ones(shape=(int(scale[-1][0]), int(scale[-1][1])))
 
+    #This scales the shape up to the transformed size
+    y_ = np.ones(shape=(int(scale[-1][0]), int(scale[-1][1])))
     for i in range(y_.shape[0]):
         for j in range(y_.shape[1]):
             y_[i][j] = y_[i][j] * y[(int(i / scale[0][0]))][(int(j / scale[0][1]))]
+
     # Adding the frame
     n, m = y_.shape
     X0 = np.ones((n, 1))
@@ -156,6 +173,7 @@ def matrix_scaler(scale, shape,shape_cluster, original_coordinates, background, 
 
 
 def colour_frame(frame_cluster, original_coordinates, Y, X):
+    #This simpy colours in the frame, once again the frame is all red but this was written to be a general solution
     colour_map = {}
     for trans, co in zip(frame_cluster, original_coordinates):
         # print(trans,co)
