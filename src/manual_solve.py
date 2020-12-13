@@ -45,6 +45,13 @@ This mapping was used-> (0: topleft, 1: topright, 2: bottomleft, 3: bottomright)
 Finally with 0a938d79, the unique challenge was finding which edges(top|bottom, left|right), the points were, then finding there orientation relative to eachother, which enable the generation of the new lines
 with the correct displacement.
 
+One observation was noticed during the undertaking of this assignment, when sandboxing solutions I began writing a function that compared the input matrixes to the output matrixes,
+to give binary answers to questions such as does the background stay the same, does the matrix shape change, etc.. that could then guide the solve methods flow, and which of the transformation functions were used.
+However it quickly became how many tests were required and in order to abstract some input->output feature mappings to a binary question were increasily complex depending on the task, and would sometimes require
+several binary questions. This was for a set of 3 of the problems in ARC and Hand coding these tests was somewhat infeasible in the time frame and for this problem there was little to gain so was abandonded, although it was valuable because through the process I gained 
+some insight the difficulty of this problem. Based on this anecdotal evidence coming up with a general AI solution for all the puzzles in ARC would seem incredible, without any human insight about the problem domains built into the system, 
+I can't see it learning all the relationships with the limited sets of training given. Which would indicate that we're a long way from truly Abstract Reasoning through AI at this point.
+
 """
 
 # get_background  and identify_clusters used by all solve_* functions
