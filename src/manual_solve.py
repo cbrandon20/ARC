@@ -238,9 +238,10 @@ def get_subsections(cluster, x):
                     min_distance = distance.euclidean(v, v_)
                     pivot_point = v_
 
-    #The adjacent points for each of the subclusters are see
+    #These are translation mappings used for or in conjunction with the (0: topleft, 1: topright, 2: bottomleft, 3: bottomright)
     rel = {(1, 0): -2, (-1, 0): 2, (0, 1): -1, (0, -1): 1}
     rel_corners = {(1, 1): 3, (-1, 1): 1, (1, -1): 2, (-1, -1): 0}
+    # Needed if there is no coloured point on the diagnol to the main shape
     if_no_foil = {(-1): 0, (1): 1, (-2): 0, (2): 2, (-2, 1): 2, (2, 1): 0, (-2, -1): 1, (2, 1): 3}
 
     relative_pos = []
@@ -259,9 +260,9 @@ def get_subsections(cluster, x):
             else:
                 relative_pos.append((k, rel[rel_pos]))
     if not pivot_has_foil:
-        sub_cluster[main_shape] = (
-        sub_cluster[main_shape], pivot_point, if_no_foil[tuple([x[1] for x in relative_pos])])
+        sub_cluster[main_shape] = ([main_shape], pivot_point, if_no_foil[tuple([x[1] for x in relative_pos])])
 
+    #Needed if there is no coloured point on the diagnol to the main shape
     for k, v in relative_pos:
         sub_cluster[k] = (sub_cluster[k], sub_cluster[main_shape][-1] + v)
 
@@ -284,8 +285,10 @@ def solve_6b9890af(x):
     clu = identify_clusters(x, background)
     frame, shape = None, None
     container_shape = []
+    #Iterates over the clusters identifies which is the shape and which is the frame
     for k, v in clu.items():
         container_shape.append(extract_frame(v, x))
+    #
     for k, v, c_, og in container_shape:
         if k == True:
             frame = v
@@ -297,6 +300,7 @@ def solve_6b9890af(x):
             shape_cluster = c_
     ##This returns the shape with a frame, the final step is to colour in the frame
     Y = matrix_scaler(get_scale(frame, shape), shape, shape_cluster, original_coordinates, 0, x)
+    #This colours in the frame, as it was added as 2 rows, 2 columns of 1's using np's hstack and vstack
     x = colour_frame(frame_cluster, frame_og_co, Y, x)
     return x.astype(int)
 
@@ -433,6 +437,7 @@ def transfrom_input_clusters_to_colour_map(clusters, x_edges, y_edges):
     #Takes in the clusters and the x,y edges
     coordinate_to_compare = {}
     single_lines = {}
+    numberoflines = []
     #finds if the points are or y edges, depending on which edge the point is on
     for k, v in clusters.items():
         line = []
@@ -440,12 +445,14 @@ def transfrom_input_clusters_to_colour_map(clusters, x_edges, y_edges):
             print(v_)
             if v_[1] in x_edges:
                 #ON X Edge
+                numberoflines.append(y_edges[-1])
                 coordinate_to_compare[k] = [v_[0], 0]
                 # fix Y and generates points required to make line to opposite edge
                 for i in range(x_edges[1] + 1):
                     line.append(np.array([v_[0], i]))
             elif v_[0] in y_edges:
-                #On Y Edge
+                #On Y
+                numberoflines.append(x_edges[-1])
                 coordinate_to_compare[k] = [0, v_[1]]
                 # fix X and generates points required to make line to opposite edge
                 for i in range(y_edges[1] + 1):
@@ -471,9 +478,11 @@ def transfrom_input_clusters_to_colour_map(clusters, x_edges, y_edges):
 
     #Geneates the repeating patterns of lines
     final_lines = {}
+    counter = 0
     for k, v in single_lines.items():
         points = []
-        for i in range(5):
+        its = int((numberoflines[counter] - np.sum(v[0])) / (np.sum(space_between_lines)))
+        for i in range(its):
             temp = v + space_between_lines * 2 * i
             [points.append(tuple(t)) for t in temp]
             final_lines[k] = points
